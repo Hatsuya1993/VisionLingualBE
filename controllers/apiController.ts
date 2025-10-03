@@ -1,7 +1,7 @@
-const AppError = require("./errorController");
+import { Request, Response, NextFunction } from "express";
+import * as AppError from "./errorController";
 
-exports.translate = (req, res, next) => {
-
+export const translate = (req: Request, res: Response, next: NextFunction): Response => {
   return res.json({ message: "Translate API" });
 
   // restaurant
