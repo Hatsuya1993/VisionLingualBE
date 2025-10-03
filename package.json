@@ -1,0 +1,28 @@
+{
+  "name": "vision_lingual_be",
+  "version": "1.0.0",
+  "description": "VisionLingual App Backend (Web App REST API)",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon app.js"
+  },
+  "engines": {
+    "node": "12.16.1",
+    "npm": "6.13.4"
+  },
+  "keywords": [
+    "Vision",
+    "App",
+    "Backend"
+  ],
+  "author": "Hazrul",
+  "license": "ISC",
+  "dependencies": {
+    "compression": "^1.7.4",
+    "express": "^4.17.1",
+    "helmet": "^3.22.0",
+    "morgan": "^1.10.0",
+    "nodemon": "^2.0.3"
+  }
+}
