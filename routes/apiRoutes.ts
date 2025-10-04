@@ -7,7 +7,7 @@ const router: Router = express.Router();
 /**
  * PRIVATE ROUTES [Authorization required]
  */
-router.get("/translate", apiController.translate);
+router.post("/translate", apiController.translate);
 
 router.use(AppError.onInvalidEndpoint);
 

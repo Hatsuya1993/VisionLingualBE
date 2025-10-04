@@ -2,6 +2,7 @@ import express, { Application, Request, Response, NextFunction } from "express";
 import helmet from "helmet"; // secure headers
 import compression from "compression"; // compress assets
 import morgan from "morgan"; // logging
+import dotenv from "dotenv";
 
 /**
  * Controllers
@@ -13,11 +14,16 @@ import * as AppError from "./controllers/errorController";
  */
 import apiRoutes from "./routes/apiRoutes";
 
+dotenv.config();
+
 const app: Application = express();
 
 /**
  * Middlewares
  */
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use(helmet());
 app.use(compression());

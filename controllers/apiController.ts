@@ -1,15 +1,19 @@
 import { Request, Response, NextFunction } from "express";
 import * as AppError from "./errorController";
+import { getBestTranslation, getBody } from "../helper/apiHelper";
+import { log } from "node:console";
 
-export const translate = (req: Request, res: Response, next: NextFunction): Response => {
-  return res.json({ message: "Translate API" });
+export const translate = async (req: Request, res: Response, next: NextFunction): Promise<void | Response<any, Record<string, any>>> => {  
 
-  // restaurant
-  //   .save()
-  //   .then((restaurant) => {
-  //     return res.json(restaurant);
-  //   })
-  //   .catch((err) => {
-  //     return AppError.onError(res, "restaurant add error" + err);
-  //   });
+  if (!req.body.query || !req.body.targetLanguage || !req.body.sourceLanguage) return AppError.bodyMissing(res, "Invalid request");
+
+try {
+
+  const response = await getBestTranslation(req.body.query, req.body.targetLanguage, req.body.sourceLanguage)
+  return res.status(200).json(response);
+
+} catch (error) {
+  console.error(error);
+}
+
 };
