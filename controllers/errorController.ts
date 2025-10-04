@@ -9,6 +9,13 @@ export const bodyMissing = (res: Response, msg: string = "Required fields are mi
   res.status(400).json(`Error: ${msg}`);
 }
 
+export const serverError = (res: Response, msg: string = "Internal server error"): void => {
+
+  //500 - internal server error
+  res.status(500).json(`Error: ${msg}`);
+
+}
+
 export const onError = (res: Response, msg: string = "Something went wrong"): void => {
   //503 - service un available
   res.json(`Error: ${msg}`);

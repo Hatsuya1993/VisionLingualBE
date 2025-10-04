@@ -1,7 +1,7 @@
 import express, { Application, Request, Response, NextFunction } from "express";
 import helmet from "helmet"; // secure headers
 import compression from "compression"; // compress assets
-import morgan from "morgan"; // logging
+import cors from 'cors';
 import dotenv from "dotenv";
 
 /**
@@ -21,6 +21,11 @@ const app: Application = express();
 /**
  * Middlewares
  */
+
+  // Enable CORS for your frontend
+app.use(cors({
+    origin: process.env.LOCALHOST // Your React app URL
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

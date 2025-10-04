@@ -70,7 +70,29 @@ const getEditDistance = (str1: string, str2: string): number => {
   return matrix[str2.length][str1.length];
 };
 
-export const getBestTranslation = async (query: string, targetLanguage: string, sourceLanguage: string) => {
+export const getSourceLanguage = async (text: string): Promise<string> => {
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    "model": "openai/gpt-4-turbo",
+    "messages": [{
+      "role": "user",
+      "content": `Detect the language of this text and respond with ONLY the
+language name in English (e.g., "English", "Spanish", "Japanese"): "${text}"`
+    }]
+  })
+});
+const data: any = await response.json();
+return data.choices[0]?.message?.content.trim() || "English";
+
+}
+
+export const getBestTranslation = async (query: string, targetLanguage: string) => {
     const models: modelType[] = [
       "openai/gpt-4-turbo",
       "anthropic/claude-3.5-sonnet",
@@ -80,14 +102,15 @@ export const getBestTranslation = async (query: string, targetLanguage: string, 
 
     const startTime = Date.now();
 
-    // Step 1: Translate to target language (parallel)
-    const forwardTranslations = await Promise.all(
-      models.map(async (model) => {
+    // Step 1: Detect source language and translate to target language (parallel)
+    const [sourceLanguage, ...forwardTranslations] = await Promise.all([
+      getSourceLanguage(query),
+      ...models.map(async (model) => {
         const modelStartTime = Date.now();
         const body = getBody(model, query, targetLanguage);
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", body);
         const data: any = await response.json();
-        
+
         const translation = data.choices[0]?.message?.content || "";
 
         return {
@@ -96,7 +119,7 @@ export const getBestTranslation = async (query: string, targetLanguage: string, 
           forwardTime: Date.now() - modelStartTime
         };
       })
-    );
+    ]);
 
     // Step 2: Translate back to source language (parallel)
     const backTranslations = await Promise.all(
@@ -132,3 +155,52 @@ export const getBestTranslation = async (query: string, targetLanguage: string, 
       originalText: query
     };
   };
+
+export const getExtractText = async (imageFile: Express.Multer.File) => {
+
+    // Convert image buffer to base64
+  const base64Image = imageFile.buffer.toString('base64');
+  const mimeType = imageFile.mimetype;
+
+  // Call OpenRouter API
+  const response = await
+  fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.0-flash-001',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${mimeType};base64,${base64Image}`
+              }
+            },
+            {
+              type: 'text',
+              text: `Extract all text from this image. Return only text.`
+            }
+          ]
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+  const error : any = await response.json();
+  console.error('OpenRouter error:', error);
+  throw new Error(`OpenRouter API error: ${error.error?.message || 'Unknown error'}`);
+}
+
+  const data : any = await response.json();
+  const translatedText = data.choices[0].message.content;
+
+  return translatedText;
+
+}
