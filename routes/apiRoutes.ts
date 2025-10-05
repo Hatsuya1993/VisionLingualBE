@@ -18,6 +18,8 @@ const upload = multer({
  */
 router.post("/translate", apiController.translate);
 
+router.post("/translate-progress", upload.single('image'), apiController.translateWithProgress);
+
 router.post("/extractText", upload.single('image'), apiController.extractTextFromImage)
 
 router.use(AppError.onInvalidEndpoint);

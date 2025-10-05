@@ -92,7 +92,7 @@ return data.choices[0]?.message?.content.trim() || "English";
 
 }
 
-export const getBestTranslation = async (query: string, targetLanguage: string) => {
+export const getBestTranslation = async (query: string, targetLanguage: string, sourceLanguage: string) => {
     const models: modelType[] = [
       "openai/gpt-4-turbo",
       "anthropic/claude-3.5-sonnet",
@@ -102,10 +102,9 @@ export const getBestTranslation = async (query: string, targetLanguage: string) 
 
     const startTime = Date.now();
 
-    // Step 1: Detect source language and translate to target language (parallel)
-    const [sourceLanguage, ...forwardTranslations] = await Promise.all([
-      getSourceLanguage(query),
-      ...models.map(async (model) => {
+    // Step 1: Translate to target language (parallel)
+    const forwardTranslations = await Promise.all(
+      models.map(async (model) => {
         const modelStartTime = Date.now();
         const body = getBody(model, query, targetLanguage);
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", body);
@@ -119,7 +118,7 @@ export const getBestTranslation = async (query: string, targetLanguage: string) 
           forwardTime: Date.now() - modelStartTime
         };
       })
-    ]);
+    );
 
     // Step 2: Translate back to source language (parallel)
     const backTranslations = await Promise.all(
