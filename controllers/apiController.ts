@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import * as AppError from "./errorController";
-import { getBestTranslation, getBody, getExtractText, getSourceLanguage } from "../helper/apiHelper";
+import { getBestTranslation, getBody, getExtractText, getSourceLanguage, handleCheckingSubscription, handleStripeSession, handleVerifyingPayment } from "../helper/apiHelper";
 
 export const translate = async (req: Request, res: Response, next: NextFunction): Promise<void | Response<any, Record<string, any>>> => {
 
@@ -29,8 +29,7 @@ export const translateWithProgress = async (req: Request, res: Response, next: N
   }
 
   if (!req.body.targetLanguage) {
-    AppError.bodyMissing(res, "Invalid request");
-    return;
+    return AppError.bodyMissing(res, "Invalid request");
   }
 
   // Set up SSE headers
@@ -82,6 +81,72 @@ export const extractTextFromImage = async (req: Request, res: Response, next: Ne
 
   } catch (error: any) {
     return AppError.serverError(res, error.message || "Something went wrong during text extraction");
+  }
+
+}
+
+export const createCheckoutSession = async (req: Request, res: Response, next: NextFunction) : Promise<void> => {
+
+  const YOUR_DOMAIN = 'http://localhost:5173';  
+
+  if(req.body.plan === undefined) {
+    return AppError.bodyMissing(res, "No plan provided");
+  }  
+
+  try {
+
+    const session : any = await handleStripeSession(req.body.plan, YOUR_DOMAIN)
+
+    res.status(200).json({url: session})
+
+  } catch (error: any) {
+    
+    return AppError.bodyMissing(res, error.message || "Something went wrong during Stripe session")
+
+  }
+
+
+}
+
+export const verifyPayment = async (req: Request, res: Response, next: NextFunction) => {
+
+  const { sessionId } = req.body  
+
+  if(sessionId === undefined) {
+    return AppError.bodyMissing(res, "No sessionId provided");
+  }  
+
+  try {
+
+    const session : any = await handleVerifyingPayment(sessionId)
+
+    res.status(200).json(session)
+    
+  } catch (error: any) {
+
+    return AppError.bodyMissing(res, error.message || "Something went wrong verifying payment")
+    
+  }
+
+
+}
+
+export const checkSubscription = async (req: Request, res: Response, next: NextFunction) => {
+
+  if(!req.body.subscriptionId) {
+    return AppError.bodyMissing(res, "No subscriptionId provided");
+  }
+
+  try {
+
+    const subscription : any = await handleCheckingSubscription(req.body.subscriptionId)
+    
+    res.status(200).json(subscription)
+    
+  } catch (error : any) {
+    
+    return AppError.bodyMissing(res, error.message || "Something went wrong checking subscription")
+
   }
 
 }

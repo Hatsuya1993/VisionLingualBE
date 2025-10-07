@@ -16,11 +16,15 @@ const upload = multer({
 /**
  * PRIVATE ROUTES [Authorization required]
  */
-router.post("/translate", apiController.translate);
 
 router.post("/translate-progress", upload.single('image'), apiController.translateWithProgress);
 
-router.post("/extractText", upload.single('image'), apiController.extractTextFromImage)
+router.post("/create-checkout-session", apiController.createCheckoutSession)
+
+router.post("/verify-payment", apiController.verifyPayment)
+
+router.post("/check-subscription", apiController.checkSubscription)
+
 
 router.use(AppError.onInvalidEndpoint);
 

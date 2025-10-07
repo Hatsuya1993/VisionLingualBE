@@ -1,3 +1,5 @@
+import Stripe from "stripe";
+
 type modelType = "openai/gpt-4-turbo" | "anthropic/claude-3.5-sonnet" | "deepseek/deepseek-chat" | "google/gemini-2.5-pro"
 
 export const getBody = (model: modelType, query: string, targetLanguage: string) => {
@@ -201,5 +203,121 @@ export const getExtractText = async (imageFile: Express.Multer.File) => {
   const translatedText = data.choices[0].message.content;
 
   return translatedText;
+
+}
+
+export const handleStripeSession = async (plan : string, domain : string) => {
+
+  if(!process.env.STRIPE_API_KEY) {
+    throw new Error("Missing Stripe API key");
+  }
+
+  let id 
+
+  if(plan.toLowerCase() === "pro") {
+    id = "price_1SFTLu2dE0QXKFAFoyCkNqzO"
+  }
+  else if(plan.toLowerCase() === "premium") {
+    id = "price_1SFTMI2dE0QXKFAFj27fue7L"
+  }
+  else if(plan.toLowerCase() === "enterprise") {
+    id = "price_1SFTMq2dE0QXKFAFPN5tiVwB" 
+  }
+  else {
+    throw new Error("Invalid plan");
+  }  
+
+  const stripe = new Stripe(process.env.STRIPE_API_KEY)
+  
+  try {
+   
+    const session = await stripe.checkout.sessions.create({
+    line_items: [{
+      price: id,
+      quantity: 1
+    }],
+    mode: "subscription",
+    success_url: `${domain}?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${domain}?canceled=true`,
+    metadata: {
+      planType: plan.toLowerCase()
+    }
+  })
+  
+  if(session.url) {
+    return session.url
+  }
+
+  throw new Error("No Stripe session found")
+
+  } catch (error) {
+
+    throw new Error("Something happen during Stripe session create : " + error)
+    
+  }
+
+}
+
+
+export const handleVerifyingPayment = async (sesionId : string) => {
+
+  if(!process.env.STRIPE_API_KEY) {
+    throw new Error("Missing Stripe API key");
+  }
+
+  try {
+    const stripe = new Stripe(process.env.STRIPE_API_KEY)
+    const session = await stripe.checkout.sessions.retrieve(sesionId)
+
+    if(session.payment_status === "paid" && session.subscription) {
+      // Retrieve full subscription details
+      const subscription = await stripe.subscriptions.retrieve(session.subscription as string);      
+
+      return {
+          success: true,
+          planType: session.metadata?.planType || null,
+          customerEmail: session.customer_details?.email || null,
+          subscriptionId: subscription.id,
+          subscriptionStatus: subscription.status, // 'active', 'canceled', 'past_due', etc.
+          subscriptionEndDate: new Date(subscription.items.data[0].current_period_end * 1000).toISOString().split('T')[0]
+        };
+    }
+
+    return {
+      success: false,
+      planType: null,
+      customerEmail: null,
+      subscriptionId: null,
+      subscriptionStatus: null,
+      subscriptionEndDate: null
+    }
+    
+  } catch (error) {
+    throw new Error("Something happen during session retrieve Stripe " + error)
+  }
+}
+
+export const handleCheckingSubscription = async (subscriptionId : string) => {
+
+  if(!process.env.STRIPE_API_KEY) {
+    throw new Error("Missing Stripe API key");
+  }
+
+  try {
+    const stripe = new Stripe(process.env.STRIPE_API_KEY);
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+    return {
+      isActive: subscription.status === 'active',
+      status: subscription.status, // 'active', 'canceled', 'past_due', 'unpaid', 'incomplete', etc.
+      currentPeriodEnd: new Date(subscription.items.data[0].current_period_end * 1000).toISOString().split('T')[0],
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      planId: subscription.items.data[0]?.price.id || null,
+      customerId: subscription.customer
+    };
+
+  } catch (error) {
+    throw new Error("Failed to retrieve subscription: " + error);
+  }
 
 }
